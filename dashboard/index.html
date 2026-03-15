@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus Crawler — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0a0f1e;
+      background-image: radial-gradient(circle at 1px 1px, #141d35 1px, transparent 0);
+      background-size: 32px 32px;
+      color: #f9fafb;
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0f1e; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+    input, textarea, button { font-family: inherit; }
+    input:focus, textarea:focus { outline: none; }
+
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+      70%  { box-shadow: 0 0 0 6px transparent; opacity: 0.6; }
+      100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slide-in-right {
+      from { opacity: 0; transform: translateX(24px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slide-out-right {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(24px); }
+    }
+    @keyframes expand-down {
+      from { opacity: 0; max-height: 0; }
+      to   { opacity: 1; max-height: 1200px; }
+    }
+
+    /* gradient border on header bottom */
+    .header-root {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(10, 15, 30, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .header-root::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, #3b82f6 30%, #8b5cf6 70%, transparent 100%);
+    }
+
+    .section-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #7c3aed 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(59,130,246,0.5);
+    }
+    .btn-primary:disabled {
+      background: #1f2937;
+      color: #4b5563;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .stat-card {
+      flex: 1;
+      min-width: 180px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      cursor: default;
+      animation: fade-up 0.4s ease both;
+    }
+    .job-row { transition: background 0.15s ease; }
+    .task-btn {
+      padding: 5px 11px; border-radius: 6px; cursor: pointer;
+      border: 1px solid #1f2937; background: transparent;
+      color: #6b7280; font-size: 11px; font-weight: 600;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .task-btn:hover { border-color: #3b82f6; color: #93c5fd; }
+    .task-btn.active { border-color: #3b82f650; background: #1e3a5f50; color: #60a5fa; }
+    .worker-card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 18px 20px;
+      transition: all 0.25s ease;
+      animation: fade-up 0.4s ease both;
+    }
+    .field-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0a0f1e;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      color: #f9fafb;
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field-input:focus {
+      border-color: #3b82f660;
+      box-shadow: 0 0 0 3px #3b82f615;
+    }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    const API_BASE = window.NEXUS_API_URL || "http://localhost:8000";
+
+    // ─── API ──────────────────────────────────────────────────────────────────
+    async function apiFetch(path, opts = {}) {
+      const res = await fetch(`${API_BASE}${path}`, opts);
+      if (!res.ok) {
+        const msg = await res.text().catch(() => res.statusText);
+        throw new Error(`${res.status}: ${msg}`);
+      }
+      return res.json();
+    }
+
+    function useInterval(fn, ms) {
+      const ref = useRef(fn);
+      useEffect(() => { ref.current = fn; }, [fn]);
+      useEffect(() => {
+        if (!ms) return;
+        const id = setInterval(() => ref.current(), ms);
+        return () => clearInterval(id);
+      }, [ms]);
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+    function timeAgo(iso) {
+      const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (s < 5)     return 'just now';
+      if (s < 60)    return `${s}s ago`;
+      if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+      if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+      return `${Math.floor(s / 86400)}d ago`;
+    }
+
+    function fmtDate(iso) {
+      return new Date(iso).toLocaleString(undefined, {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    // ─── Status badge ─────────────────────────────────────────────────────────
+    const STATUS_CFG = {
+      pending:   { bg: '#1f293780', text: '#9ca3af', dot: '#6b7280',  border: '#374151'    },
+      running:   { bg: '#1e3a5f80', text: '#60a5fa', dot: '#3b82f6',  border: '#3b82f650'  },
+      completed: { bg: '#06403080', text: '#34d399', dot: '#10b981',  border: '#10b98150'  },
+      failed:    { bg: '#450a0a80', text: '#f87171', dot: '#ef4444',  border: '#ef444450'  },
+      retrying:  { bg: '#451a0380', text: '#fbbf24', dot: '#f59e0b',  border: '#f59e0b50'  },
+      idle:      { bg: '#06403080', text: '#34d399', dot: '#10b981',  border: '#10b98150'  },
+      busy:      { bg: '#1e3a5f80', text: '#60a5fa', dot: '#3b82f6',  border: '#3b82f650'  },
+      offline:   { bg: '#1f293780', text: '#6b7280', dot: '#4b5563',  border: '#37415150'  },
+    };
+
+    function StatusBadge({ status }) {
+      const c = STATUS_CFG[status] || STATUS_CFG.pending;
+      const pulse = status === 'running' || status === 'busy';
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '3px 10px 3px 8px', borderRadius: 99,
+          background: c.bg, border: `1px solid ${c.border}`,
+          color: c.text, fontSize: 11, fontWeight: 600,
+          letterSpacing: '0.03em', whiteSpace: 'nowrap',
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+            background: c.dot, color: c.dot,
+            boxShadow: `0 0 5px ${c.dot}`,
+            animation: pulse ? 'pulse-ring 1.5s ease-in-out infinite' : 'none',
+          }} />
+          {status}
+        </span>
+      );
+    }
+
+    // ─── Progress bar ─────────────────────────────────────────────────────────
+    function ProgressBar({ completed = 0, failed = 0, total = 0 }) {
+      const cpct = total > 0 ? (completed / total) * 100 : 0;
+      const fpct = total > 0 ? (failed   / total) * 100 : 0;
+      const pct  = Math.round(cpct + fpct);
+      return (
+        <div>
+          <div style={{ height: 5, background: '#1f2937', borderRadius: 99, overflow: 'hidden', display: 'flex', marginBottom: 5 }}>
+            <div style={{ width: `${cpct}%`, background: 'linear-gradient(90deg,#059669,#10b981)', transition: 'width 0.6s ease' }} />
+            <div style={{ width: `${fpct}%`, background: '#ef4444', transition: 'width 0.6s ease' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280' }}>
+            <span>{completed}/{total}</span>
+            <span style={{ color: pct === 100 ? '#10b981' : '#9ca3af' }}>{pct}%</span>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Toast ────────────────────────────────────────────────────────────────
+    function Toast({ toast }) {
+      if (!toast) return null;
+      const ok = toast.type === 'success';
+      return (
+        <div style={{
+          position: 'fixed', top: 76, right: 24, zIndex: 9999,
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+          padding: '14px 18px', borderRadius: 12, maxWidth: 400, minWidth: 280,
+          background: ok ? '#022c22' : '#1c0505',
+          border: `1px solid ${ok ? '#10b98150' : '#ef444450'}`,
+          boxShadow: `0 16px 48px ${ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+          animation: toast.out
+            ? 'slide-out-right 0.25s ease forwards'
+            : 'slide-in-right 0.3s ease',
+        }}>
+          <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{ok ? '✅' : '❌'}</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: ok ? '#34d399' : '#f87171' }}>
+              {ok ? 'Job Created' : 'Error'}
+            </div>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 3 }}>{toast.message}</div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Header ───────────────────────────────────────────────────────────────
+    function Header() {
+      const [now, setNow] = useState(new Date());
+      useEffect(() => {
+        const id = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(id);
+      }, []);
+
+      return (
+        <header className="header-root">
+          <div style={{
+            maxWidth: 1400, margin: '0 auto', padding: '0 32px',
+            height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            {/* Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 26, lineHeight: 1 }}>🕷️</span>
+              <span style={{
+                fontWeight: 800, fontSize: 20, letterSpacing: '-0.03em',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Nexus Crawler
+              </span>
+            </div>
+
+            {/* Right */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              {/* Live dot */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{
+                  display: 'block', width: 8, height: 8, borderRadius: '50%',
+                  background: '#10b981', color: '#10b981',
+                  boxShadow: '0 0 10px #10b981',
+                  animation: 'pulse-ring 1.8s ease-in-out infinite',
+                }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#10b981', letterSpacing: '0.05em' }}>
+                  LIVE
+                </span>
+              </div>
+
+              {/* Clock */}
+              <div style={{ borderLeft: '1px solid #1f2937', paddingLeft: 20, textAlign: 'right' }}>
+                <div style={{
+                  fontSize: 15, fontWeight: 600, color: '#f3f4f6',
+                  fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em',
+                }}>
+                  {now.toLocaleTimeString()}
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>
+                  {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+      );
+    }
+
+    // ─── Stats bar ────────────────────────────────────────────────────────────
+    const STAT_DEFS = [
+      { key: 'total_jobs',     label: 'Total Jobs',     color: '#8b5cf6', glow: '#8b5cf625', icon: '📊', spin: false },
+      { key: 'running_jobs',   label: 'Running Jobs',   color: '#3b82f6', glow: '#3b82f625', icon: '⚙️',  spin: true  },
+      { key: 'active_workers', label: 'Active Workers', color: '#10b981', glow: '#10b98125', icon: '🖥️',  spin: false },
+      { key: 'queue_length',   label: 'Queue Length',   color: '#f59e0b', glow: '#f59e0b25', icon: '📋', spin: false },
+    ];
+
+    function StatCard({ def, value }) {
+      const [hov, setHov] = useState(false);
+      const num = value ?? 0;
+      return (
+        <div
+          className="stat-card"
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}
+          style={{
+            borderColor: hov ? def.color + '55' : '#1f2937',
+            boxShadow: hov
+              ? `0 0 40px ${def.glow}, 0 8px 32px rgba(0,0,0,0.4)`
+              : '0 2px 8px rgba(0,0,0,0.2)',
+          }}
+        >
+          <div style={{
+            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+            background: def.color + '18', border: `1px solid ${def.color}30`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 24,
+            animation: def.spin && num > 0 ? 'spin 3s linear infinite' : 'none',
+            transition: 'transform 0.3s',
+            transform: hov ? 'scale(1.1)' : 'scale(1)',
+          }}>
+            {def.icon}
+          </div>
+          <div>
+            <div style={{
+              fontSize: 38, fontWeight: 800, lineHeight: 1,
+              color: def.color, fontVariantNumeric: 'tabular-nums',
+              textShadow: hov ? `0 0 24px ${def.color}60` : 'none',
+              transition: 'text-shadow 0.3s',
+            }}>
+              {num}
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7280', marginTop: 5, fontWeight: 700, letterSpacing: '0.05em' }}>
+              {def.label.toUpperCase()}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function StatsBar({ stats }) {
+      return (
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '24px 32px 0' }}>
+          {STAT_DEFS.map((def, i) => (
+            <StatCard key={def.key} def={def} value={stats?.[def.key]}
+              style={{ animationDelay: `${i * 0.08}s` }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    // ─── Submit Job Panel ─────────────────────────────────────────────────────
+    function SubmitJobPanel({ onJobCreated }) {
+      const [name,    setName]    = useState('');
+      const [rawUrls, setRawUrls] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [toast,   setToast]   = useState(null);
+      const timer = useRef(null);
+
+      function showToast(type, message) {
+        clearTimeout(timer.current);
+        setToast({ type, message, out: false });
+        timer.current = setTimeout(() => {
+          setToast(t => t ? { ...t, out: true } : null);
+          setTimeout(() => setToast(null), 280);
+        }, 4000);
+      }
+
+      async function handleSubmit(e) {
+        e.preventDefault();
+        const urls = rawUrls.split('\n').map(s => s.trim()).filter(Boolean);
+        if (!name.trim())  return showToast('error', 'Job name is required.');
+        if (!urls.length)  return showToast('error', 'Add at least one URL.');
+        setLoading(true);
+        try {
+          await apiFetch('/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim(), urls }),
+          });
+          showToast('success', `"${name.trim()}" queued with ${urls.length} URL${urls.length > 1 ? 's' : ''}.`);
+          setName(''); setRawUrls('');
+          onJobCreated?.();
+        } catch (err) {
+          showToast('error', String(err.message).slice(0, 140));
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      return (
+        <div className="section-card" style={{ padding: '22px 26px', margin: '20px 32px 0' }}>
+          <Toast toast={toast} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: '#1e3a5f', border: '1px solid #3b82f630',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
+            }}>🚀</div>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f3f4f6' }}>Submit New Job</h2>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {/* Name */}
+              <div style={{ flex: '0 1 220px', minWidth: 180 }}>
+                <label className="field-label">JOB NAME</label>
+                <input
+                  className="field-input"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Docs Crawl"
+                />
+              </div>
+
+              {/* URLs */}
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <label className="field-label">
+                  URLS <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#4b5563' }}>— one per line</span>
+                </label>
+                <textarea
+                  className="field-input"
+                  value={rawUrls}
+                  onChange={e => setRawUrls(e.target.value)}
+                  placeholder={"https://example.com\nhttps://docs.example.com/guide\nhttps://blog.example.com"}
+                  rows={3}
+                  style={{ resize: 'vertical', lineHeight: 1.7, fontSize: 13 }}
+                />
+              </div>
+
+              {/* Button */}
+              <div>
+                <button type="submit" disabled={loading} className="btn-primary"
+                  style={{ height: 42, padding: '0 26px', fontSize: 14 }}>
+                  {loading ? '⏳ Launching…' : '🚀 Launch Job'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // ─── Tasks panel (inline) ─────────────────────────────────────────────────
+    function TasksPanel({ jobId }) {
+      const [tasks, setTasks] = useState(null);
+
+      const load = useCallback(async () => {
+        try { setTasks(await apiFetch(`/jobs/${jobId}/tasks`)); }
+        catch { setTasks([]); }
+      }, [jobId]);
+
+      useEffect(() => { load(); }, [load]);
+      useInterval(load, 3000);
+
+      if (tasks === null) {
+        return (
+          <div style={{ padding: '16px 24px', color: '#6b7280', fontSize: 13 }}>
+            <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: 8 }}>⚙️</span>
+            Loading tasks…
+          </div>
+        );
+      }
+      if (!tasks.length) {
+        return <div style={{ padding: '16px 24px', color: '#4b5563', fontSize: 13 }}>No tasks found.</div>;
+      }
+
+      return (
+        <div style={{ padding: '14px 24px 18px', animation: 'fade-up 0.2s ease' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '0.06em', marginBottom: 10 }}>
+            TASKS ({tasks.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
+            {tasks.map(t => (
+              <div key={t.id} style={{
+                display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+                padding: '8px 12px', borderRadius: 8,
+                background: '#0a0f1e', border: '1px solid #1f2937',
+              }}>
+                <StatusBadge status={t.status} />
+                <span style={{ fontSize: 12, color: '#d1d5db', flex: 1, wordBreak: 'break-all', minWidth: 140 }}>
+                  {t.url}
+                </span>
+                {t.retries > 0 && (
+                  <span style={{
+                    fontSize: 11, padding: '2px 8px', borderRadius: 99,
+                    background: '#451a0320', color: '#fbbf24', border: '1px solid #f59e0b30',
+                  }}>↩ {t.retries}×</span>
+                )}
+                {t.result?.response_time_ms != null && (
+                  <span style={{
+                    fontSize: 11, padding: '2px 8px', borderRadius: 99,
+                    background: '#06403020', color: '#34d399', border: '1px solid #10b98130',
+                    whiteSpace: 'nowrap',
+                  }}>⚡ {Math.round(t.result.response_time_ms)}ms</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Jobs section ─────────────────────────────────────────────────────────
+    const COL = '2fr 120px 1fr 64px 140px 88px';
+
+    function JobRow({ job, idx, expanded, onToggle }) {
+      const [hov, setHov] = useState(false);
+      const base = idx % 2 === 0 ? '#111827' : '#0e1929';
+      return (
+        <div>
+          <div
+            className="job-row"
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+              display: 'grid', gridTemplateColumns: COL,
+              alignItems: 'center', padding: '13px 20px',
+              background: hov ? '#162035' : base,
+              borderBottom: '1px solid #1f293750',
+            }}
+          >
+            <div style={{
+              fontSize: 14, fontWeight: 600, color: '#f3f4f6',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12,
+            }}>
+              {job.name}
+            </div>
+            <div><StatusBadge status={job.status} /></div>
+            <div style={{ paddingRight: 16 }}>
+              <ProgressBar completed={job.completed_urls} failed={job.failed_urls} total={job.total_urls} />
+            </div>
+            <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>{job.total_urls}</div>
+            <div style={{ fontSize: 11, color: '#6b7280' }}>{fmtDate(job.created_at)}</div>
+            <div>
+              <button
+                className={`task-btn${expanded ? ' active' : ''}`}
+                onClick={onToggle}
+              >
+                📋 Tasks
+              </button>
+            </div>
+          </div>
+
+          {expanded && (
+            <div style={{
+              background: '#0d1524', borderBottom: '1px solid #1f2937',
+              animation: 'expand-down 0.25s ease',
+            }}>
+              <TasksPanel jobId={job.id} />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function JobsSection({ jobs }) {
+      const [expanded, setExpanded] = useState(null);
+      const toggle = id => setExpanded(e => e === id ? null : id);
+
+      return (
+        <div style={{ margin: '28px 32px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>📋</span>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#f3f4f6' }}>Jobs</h2>
+            {jobs?.length > 0 && (
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
+                background: '#1f2937', color: '#9ca3af', border: '1px solid #374151',
+              }}>{jobs.length}</span>
+            )}
+          </div>
+
+          <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid #1f2937' }}>
+            {/* Sticky column headers */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: COL,
+              padding: '10px 20px', alignItems: 'center',
+              background: '#0a0f1e', borderBottom: '1px solid #1f2937',
+              position: 'sticky', top: 64,
+              fontSize: 10, fontWeight: 700, color: '#4b5563', letterSpacing: '0.08em',
+            }}>
+              <div>NAME</div>
+              <div>STATUS</div>
+              <div>PROGRESS</div>
+              <div style={{ textAlign: 'center' }}>URLS</div>
+              <div>CREATED</div>
+              <div>ACTIONS</div>
+            </div>
+
+            {!jobs?.length ? (
+              <div style={{ padding: '56px 32px', textAlign: 'center', background: '#111827' }}>
+                <div style={{ fontSize: 52, marginBottom: 14, opacity: 0.3 }}>🕸️</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#6b7280' }}>No jobs yet</div>
+                <div style={{ fontSize: 12, color: '#4b5563', marginTop: 6 }}>
+                  Submit a crawl job above to get started
+                </div>
+              </div>
+            ) : (
+              jobs.map((job, i) => (
+                <JobRow
+                  key={job.id} job={job} idx={i}
+                  expanded={expanded === job.id}
+                  onToggle={() => toggle(job.id)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Workers section ──────────────────────────────────────────────────────
+    function WorkerCard({ worker }) {
+      const [hov, setHov] = useState(false);
+      const [, tick] = useState(0);
+      useEffect(() => {
+        const id = setInterval(() => tick(t => t + 1), 1000);
+        return () => clearInterval(id);
+      }, []);
+
+      const isOffline = worker.status === 'offline';
+      const sc = { idle: '#10b981', busy: '#3b82f6', offline: '#4b5563' }[worker.status] || '#4b5563';
+
+      return (
+        <div
+          className="worker-card"
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}
+          style={{
+            opacity: isOffline ? 0.45 : 1,
+            borderColor: hov && !isOffline ? sc + '50' : '#1f2937',
+            boxShadow: hov && !isOffline
+              ? `0 0 32px ${sc}20, 0 4px 20px rgba(0,0,0,0.3)`
+              : '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        >
+          {/* Top row: ID + status */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div style={{ overflow: 'hidden', flex: 1, paddingRight: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f3f4f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {worker.id}
+              </div>
+              <div style={{ fontSize: 11, color: '#4b5563', marginTop: 2 }}>{worker.hostname}</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+              <span style={{
+                width: 12, height: 12, borderRadius: '50%',
+                background: sc, color: sc,
+                boxShadow: isOffline ? 'none' : `0 0 10px ${sc}`,
+                animation: worker.status === 'busy' ? 'pulse-ring 1.2s infinite' : 'none',
+                display: 'block',
+              }} />
+              <StatusBadge status={worker.status} />
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+            {[
+              { label: 'DONE',   value: worker.tasks_completed, color: '#10b981', bg: '#06403018' },
+              { label: 'FAILED', value: worker.tasks_failed,    color: '#ef4444', bg: '#450a0a18' },
+            ].map(s => (
+              <div key={s.label} style={{
+                flex: 1, borderRadius: 10, padding: '10px 12px',
+                background: s.bg, border: `1px solid ${s.color}20`, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#4b5563', marginTop: 4, letterSpacing: '0.06em' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Heartbeat */}
+          <div style={{ fontSize: 11, color: '#4b5563', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span>🕐</span>
+            <span>{timeAgo(worker.last_heartbeat)}</span>
+          </div>
+        </div>
+      );
+    }
+
+    function WorkersSection({ workers }) {
+      return (
+        <div style={{ margin: '32px 32px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>🖥️</span>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#f3f4f6' }}>Workers</h2>
+            {workers?.length > 0 && (
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
+                background: '#1f2937', color: '#9ca3af', border: '1px solid #374151',
+              }}>{workers.length}</span>
+            )}
+          </div>
+
+          {!workers?.length ? (
+            <div className="section-card" style={{ padding: '48px 32px', textAlign: 'center' }}>
+              <div style={{ fontSize: 40, opacity: 0.25, marginBottom: 12 }}>💤</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#6b7280' }}>No workers connected</div>
+              <div style={{ fontSize: 12, color: '#4b5563', marginTop: 6 }}>
+                Run{' '}
+                <code style={{
+                  color: '#8b5cf6', fontFamily: 'ui-monospace, monospace',
+                  background: '#1f2937', padding: '1px 7px', borderRadius: 5, fontSize: 11,
+                }}>python3 -m worker.main</code>
+                {' '}to connect a worker
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
+              {workers.map(w => <WorkerCard key={w.id} worker={w} />)}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ─── Footer ───────────────────────────────────────────────────────────────
+    function Footer() {
+      return (
+        <footer style={{
+          margin: '40px 32px 0',
+          padding: '20px 0 32px',
+          borderTop: '1px solid #1f2937',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexWrap: 'wrap', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🕷️</span>
+            <span style={{ fontWeight: 700, color: '#d1d5db' }}>Nexus Crawler</span>
+            <span style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 99,
+              background: '#1f2937', color: '#6b7280', border: '1px solid #374151', fontWeight: 600,
+            }}>v0.1.0</span>
+          </div>
+          <a
+            href="https://github.com/ashah5123/nexus-crawler"
+            target="_blank" rel="noopener noreferrer"
+            style={{ color: '#6b7280', fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#9ca3af'}
+            onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
+          >
+            <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.71-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.8c.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85 0 1.34-.01 2.41-.01 2.74 0 .27.18.58.69.48A10.02 10.02 0 0 0 22 12c0-5.52-4.48-10-10-10z"/>
+            </svg>
+            GitHub
+          </a>
+        </footer>
+      );
+    }
+
+    // ─── Section divider ──────────────────────────────────────────────────────
+    function Divider() {
+      return (
+        <div style={{
+          margin: '32px 32px 0',
+          height: 1,
+          background: 'linear-gradient(90deg, transparent, #1f2937, transparent)',
+        }} />
+      );
+    }
+
+    // ─── App ──────────────────────────────────────────────────────────────────
+    function App() {
+      const [stats,   setStats]   = useState(null);
+      const [jobs,    setJobs]    = useState([]);
+      const [workers, setWorkers] = useState([]);
+
+      const loadStats   = useCallback(async () => { try { setStats(  await apiFetch('/stats'));   } catch {} }, []);
+      const loadJobs    = useCallback(async () => { try { setJobs(    await apiFetch('/jobs'));    } catch {} }, []);
+      const loadWorkers = useCallback(async () => { try { setWorkers( await apiFetch('/workers')); } catch {} }, []);
+
+      useEffect(() => { loadStats(); loadJobs(); loadWorkers(); }, []);
+      useInterval(loadStats,   3000);
+      useInterval(loadJobs,    3000);
+      useInterval(loadWorkers, 5000);
+
+      return (
+        <>
+          <Header />
+          <main style={{ maxWidth: 1400, margin: '0 auto', paddingBottom: 0 }}>
+            <StatsBar stats={stats} />
+            <SubmitJobPanel onJobCreated={() => { loadJobs(); loadStats(); }} />
+            <JobsSection jobs={jobs} />
+            <Divider />
+            <WorkersSection workers={workers} />
+            <Footer />
+          </main>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
